@@ -7,16 +7,13 @@ import {
   Product 
 } from '../../types';
 import { 
-  MOCK_ADDONS, 
   EMBROIDERY_FONTS, 
   EMBROIDERY_COLORS 
 } from '../../constants';
 import { 
   ChevronDown, 
-  Upload, 
   Check, 
-  Type as FontIcon, 
-  Image as ImageIcon,
+  ImageIcon,
   ChevronLeft
 } from 'lucide-react';
 
@@ -36,6 +33,8 @@ interface SidebarProps {
   showAids: boolean;
   onToggleAids: (show: boolean) => void;
   embroideryState: { text: string, font: string, color: string };
+  letterAddons: Addon[];
+  patchAddons: Addon[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -53,38 +52,28 @@ const Sidebar: React.FC<SidebarProps> = ({
   onAddToCart,
   showAids,
   onToggleAids,
-  embroideryState
+  embroideryState,
+  letterAddons,
+  patchAddons
 }) => {
   const [activeTab, setActiveTab] = useState<'LETTERS' | 'PATCHES'>('LETTERS');
-  const [drillDownAddon, setDrillDownAddon] = useState<Addon | null>(null);
+  const [drillDownGroup, setDrillDownGroup] = useState<string | null>(null);
   const [autoTidy, setAutoTidy] = useState(false);
-
-  const baseAddons = MOCK_ADDONS.filter(addon => {
-    if (activeTab === 'LETTERS') return addon.category === AddonCategory.LETTERS;
-    if (activeTab === 'PATCHES') return addon.category === AddonCategory.PATCHES;
-    return true;
-  });
-
-  const drillDownItems = (drillDownAddon && drillDownAddon.category === AddonCategory.LETTERS) 
-    ? Array.from({ length: 26 }).map((_, i) => {
-        const char = String.fromCharCode(65 + i);
-        const bgMatch = drillDownAddon.imageUrl.match(/backgroundColor=([^&]+)/);
-        const bgColor = bgMatch ? bgMatch[1] : 'cccccc';
-        return {
-          ...drillDownAddon,
-          id: `${drillDownAddon.id}_${char}`,
-          title: `Letter ${char} - ${drillDownAddon.colorName}`,
-          imageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${char}&backgroundColor=${bgColor}&fontSize=60`,
-        };
-      }) 
-    : (drillDownAddon && drillDownAddon.category === AddonCategory.PATCHES)
-    ? [drillDownAddon] // Simplified patch drill-down
-    : [];
 
   const handleModeChange = (newMode: CustomizationMode) => {
     onModeChange(newMode);
-    setDrillDownAddon(null);
+    setDrillDownGroup(null);
   };
+
+  // Group letters by their base color for selection
+  const letterGroups = Array.from(new Set(letterAddons.map(a => a.baseColorGroup))).filter(Boolean);
+  
+  // Find a representative addon for the color group UI
+  const getGroupAddon = (group: string) => letterAddons.find(a => a.baseColorGroup === group);
+
+  const filteredLetters = drillDownGroup 
+    ? letterAddons.filter(a => a.baseColorGroup === drillDownGroup)
+    : [];
 
   return (
     <div className="w-full lg:w-[450px] h-full flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden shadow-2xl">
@@ -118,10 +107,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className="group flex flex-col items-center gap-3"
                 >
                   <div 
-                    className={`w-14 h-14 rounded-full border-2 transition-all ${selectedVariantId === v.id ? 'border-pink-600 scale-110 shadow-lg' : 'border-white hover:border-slate-200'}`}
+                    className={`w-14 h-14 rounded-full border-2 transition-all flex items-center justify-center ${selectedVariantId === v.id ? 'border-pink-600 scale-110 shadow-lg' : 'border-white hover:border-slate-200'}`}
                     style={{ backgroundColor: v.color }}
                   >
-                    {selectedVariantId === v.id && <Check className="absolute inset-0 m-auto text-white drop-shadow-md" size={24} />}
+                    {selectedVariantId === v.id && <Check className="text-white drop-shadow-md" size={24} />}
                   </div>
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{v.title}</span>
                 </button>
@@ -132,62 +121,84 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {mode === 'LETTERS_PATCHES' && (
           <div className="space-y-6">
-            {drillDownAddon ? (
-              <div className="space-y-6">
-                <button 
-                  onClick={() => setDrillDownAddon(null)}
-                  className="flex items-center gap-2 text-[10px] font-black uppercase text-pink-600 hover:text-pink-700"
-                >
-                  <ChevronLeft size={16} /> Back to colors
-                </button>
-                <div className="grid grid-cols-4 gap-3">
-                  {drillDownItems.map((item) => (
-                    <button 
-                      key={item.id}
-                      onClick={() => onAddAddon(item as any)}
-                      className="aspect-square bg-white rounded-2xl p-3 border border-slate-100 hover:border-pink-500 transition-all shadow-sm flex items-center justify-center group"
-                    >
-                      <img src={item.imageUrl} alt={item.title} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex bg-slate-200/50 p-1.5 rounded-full">
-                  <button
-                    onClick={() => setActiveTab('LETTERS')}
-                    className={`flex-1 py-3 rounded-full text-[10px] font-black tracking-widest transition-all ${
-                      activeTab === 'LETTERS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-                    }`}
+            <div className="flex bg-slate-200/50 p-1.5 rounded-full mb-6">
+              <button
+                onClick={() => { setActiveTab('LETTERS'); setDrillDownGroup(null); }}
+                className={`flex-1 py-3 rounded-full text-[10px] font-black tracking-widest transition-all ${
+                  activeTab === 'LETTERS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                LETTERS
+              </button>
+              <button
+                onClick={() => { setActiveTab('PATCHES'); setDrillDownGroup(null); }}
+                className={`flex-1 py-3 rounded-full text-[10px] font-black tracking-widest transition-all ${
+                  activeTab === 'PATCHES' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                PATCHES
+              </button>
+            </div>
+
+            {activeTab === 'LETTERS' ? (
+              drillDownGroup ? (
+                <div className="space-y-6">
+                  <button 
+                    onClick={() => setDrillDownGroup(null)}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase text-pink-600 hover:text-pink-700"
                   >
-                    LETTERS
+                    <ChevronLeft size={16} /> Back to colors
                   </button>
-                  <button
-                    onClick={() => setActiveTab('PATCHES')}
-                    className={`flex-1 py-3 rounded-full text-[10px] font-black tracking-widest transition-all ${
-                      activeTab === 'PATCHES' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-                    }`}
-                  >
-                    PATCHES
-                  </button>
+                  <div className="grid grid-cols-4 gap-3">
+                    {filteredLetters.map((item) => (
+                      <button 
+                        key={item.id}
+                        onClick={() => onAddAddon(item)}
+                        className="aspect-square bg-white rounded-2xl p-3 border border-slate-100 hover:border-pink-500 transition-all shadow-sm flex items-center justify-center group"
+                      >
+                        <img src={item.imageUrl} alt={item.title} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              ) : (
                 <div className="grid grid-cols-3 gap-5">
-                  {baseAddons.map((addon) => (
-                    <div 
-                      key={addon.id}
-                      className="group flex flex-col items-center cursor-pointer"
-                      onClick={() => setDrillDownAddon(addon)}
-                    >
-                      <div className="w-full aspect-square bg-white rounded-2xl p-4 border border-slate-100 group-hover:border-pink-500 transition-all flex items-center justify-center mb-3 shadow-sm">
-                        <img src={addon.imageUrl} alt={addon.title} className="max-w-full max-h-full object-contain" />
+                  {letterGroups.map((group) => {
+                    const addon = getGroupAddon(group!);
+                    if (!addon) return null;
+                    return (
+                      <div 
+                        key={group}
+                        className="group flex flex-col items-center cursor-pointer"
+                        onClick={() => setDrillDownGroup(group!)}
+                      >
+                        <div className="w-full aspect-square bg-white rounded-2xl p-4 border border-slate-100 group-hover:border-pink-500 transition-all flex items-center justify-center mb-3 shadow-sm">
+                          <img src={addon.imageUrl} alt={group!} className="max-w-full max-h-full object-contain" />
+                        </div>
+                        <span className="text-[9px] uppercase font-black text-slate-400 text-center leading-none tracking-tight">
+                          {group}
+                        </span>
                       </div>
-                      <span className="text-[9px] uppercase font-black text-slate-400 text-center leading-none tracking-tight">
-                        {addon.colorName || addon.title}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+              )
+            ) : (
+              <div className="grid grid-cols-3 gap-5">
+                {patchAddons.map((addon) => (
+                  <div 
+                    key={addon.id}
+                    className="group flex flex-col items-center cursor-pointer"
+                    onClick={() => onAddAddon(addon)}
+                  >
+                    <div className="w-full aspect-square bg-white rounded-2xl p-4 border border-slate-100 group-hover:border-pink-500 transition-all flex items-center justify-center mb-3 shadow-sm">
+                      <img src={addon.imageUrl} alt={addon.title} className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <span className="text-[9px] uppercase font-black text-slate-400 text-center leading-none tracking-tight">
+                      {addon.title}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -197,7 +208,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-8">
              <div className="bg-pink-50 p-5 rounded-2xl">
               <p className="text-[11px] text-pink-800 font-bold leading-relaxed uppercase tracking-tight">
-                Up to 60 characters max. 1 line with up to 12 characters. Case sensitive. A-Z and 0-9.
+                Up to 60 characters max. 1 line with up to 12 characters. Case sensitive.
               </p>
             </div>
 
@@ -243,9 +254,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   placeholder="Enter text..."
                   className="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-5 font-black text-slate-900 focus:outline-none focus:border-pink-600 transition-all shadow-sm uppercase"
                 />
-                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">
-                  {embroideryState.text.length}/60
-                </span>
               </div>
             </div>
           </div>
@@ -253,30 +261,20 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {mode === 'VINYL' && (
           <div className="space-y-8">
-            <div className="bg-pink-50 p-5 rounded-2xl">
-              <p className="text-[11px] text-pink-800 font-bold leading-relaxed uppercase tracking-tight">
-                "Just type the words or logo you want, we'll do the rest." Vinyl transfers are durable and look amazing.
-              </p>
-            </div>
             <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center space-y-6">
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-400">
                 <ImageIcon size={40} />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-black text-slate-900 uppercase">Upload your design</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">JPG, PNG, or SVG supported</p>
               </div>
               <label className="inline-block px-10 py-5 bg-pink-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-pink-700 transition-colors shadow-lg shadow-pink-100">
                 Choose File
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && onAddVinyl(e.target.files[0])} />
               </label>
-              <p className="text-[9px] text-slate-400 font-bold uppercase">Please upload an image</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="p-10 bg-white border-t border-slate-100 space-y-10 shadow-[0_-20px_60px_rgba(0,0,0,0.04)]">
+      <div className="p-10 bg-white border-t border-slate-100 space-y-10">
         <div className="space-y-5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Auto Tidy & Align</span>

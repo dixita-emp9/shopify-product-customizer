@@ -2,17 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Trash2, 
-  Download,
   Trash,
   ChevronLeft,
   CheckCircle2,
-  Share2,
-  ChevronDown,
   Sparkles,
   Zap
 } from 'lucide-react';
-import { Product, Addon, CanvasElement, CustomizationData, CustomizationMode } from './types';
-import { fetchShopifyProducts, addToCart, isShopifyConnected } from './services/shopifyService';
+import { Product, Addon, AddonCategory, CanvasElement, CustomizationData, CustomizationMode } from './types';
+import { fetchShopifyProducts, fetchShopifyAddons, addToCart, isShopifyConnected } from './services/shopifyService';
 import { getDesignSuggestions } from './services/geminiService';
 import CustomizerCanvas from './components/Customizer/Canvas';
 import Sidebar from './components/Customizer/Sidebar';
@@ -20,6 +17,8 @@ import Sidebar from './components/Customizer/Sidebar';
 const App: React.FC = () => {
   const [step, setStep] = useState<'selection' | 'details' | 'customizer'>('selection');
   const [products, setProducts] = useState<Product[]>([]);
+  const [letterAddons, setLetterAddons] = useState<Addon[]>([]);
+  const [patchAddons, setPatchAddons] = useState<Addon[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [customMode, setCustomMode] = useState<CustomizationMode>('COLOR');
@@ -39,29 +38,48 @@ const App: React.FC = () => {
   const [embroideryColor, setEmbroideryColor] = useState('#000000');
 
   useEffect(() => {
-    fetchShopifyProducts().then((res) => {
-      setProducts(res);
-      if (res.length > 0) {
-        setSelectedProduct(res[0]);
-        setSelectedVariantId(res[0].variantId);
+    const loadData = async () => {
+      try {
+        const [prodRes, lettersRes, patchesRes] = await Promise.all([
+          fetchShopifyProducts(),
+          fetchShopifyAddons('letters', AddonCategory.LETTERS),
+          fetchShopifyAddons('patches', AddonCategory.PATCHES)
+        ]);
+        
+        setProducts(prodRes);
+        setLetterAddons(lettersRes);
+        setPatchAddons(patchesRes);
+        
+        if (prodRes.length > 0) {
+          setSelectedProduct(prodRes[0]);
+          setSelectedVariantId(prodRes[0].variantId);
+        }
+      } catch (err) {
+        console.error("Critical error loading initial data:", err);
       }
-    });
+    };
+    loadData();
   }, []);
 
   const fetchAiSuggestions = async () => {
     if (!selectedProduct) return;
     setIsLoadingAi(true);
-    const addons = canvasElements.map(el => el.addon?.title || el.text || 'Element');
-    const suggestion = await getDesignSuggestions(selectedProduct.title, addons);
-    setAiInspiration(suggestion);
-    setIsLoadingAi(false);
+    try {
+      const addons = canvasElements.map(el => el.addon?.title || el.text || 'Element');
+      const suggestion = await getDesignSuggestions(selectedProduct.title, addons);
+      setAiInspiration(suggestion);
+    } catch (err) {
+      console.error("AI Error:", err);
+    } finally {
+      setIsLoadingAi(false);
+    }
   };
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
     setSelectedVariantId(product.variantId);
     setStep('details');
-    setAiInspiration(''); // Reset for new product
+    setAiInspiration('');
   };
 
   const addAddonToCanvas = (addon: Addon) => {
@@ -156,7 +174,7 @@ const App: React.FC = () => {
   const totalPrice = (selectedProduct?.price || 0) + addonPrice;
 
   const handleAddToCart = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || isAddingToCart) return;
     setIsAddingToCart(true);
     
     const customization: CustomizationData = {
@@ -173,12 +191,11 @@ const App: React.FC = () => {
       const checkoutUrl = await addToCart(customization);
       setShowSuccess(true);
       setTimeout(() => {
-        window.location.href = checkoutUrl;
-      }, 2000);
+        window.location.assign(checkoutUrl);
+      }, 1500);
     } catch (err) {
       console.error("Cart Error:", err);
-      alert("Failed to create cart. Try again.");
-    } finally {
+      alert("Something went wrong. Please try again.");
       setIsAddingToCart(false);
     }
   };
@@ -209,7 +226,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
               {products.map(product => (
                 <div key={product.id} className="group cursor-pointer" onClick={() => handleProductSelect(product)}>
-                  <div className="aspect-[4/5] bg-slate-50 relative overflow-hidden mb-10 flex items-center justify-center p-16 rounded-[48px] group-hover:bg-slate-100 transition-all duration-700">
+                  <div className="aspect-[4/5] bg-slate-50 relative overflow-hidden mb-10 flex items-center justify-center p-16 rounded-[48px] group-hover:bg-slate-100 transition-all duration-700 shadow-sm">
                     <img src={product.imageUrl} alt={product.title} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-1000 drop-shadow-xl" />
                   </div>
                   <h3 className="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tight">{product.title}</h3>
@@ -355,18 +372,24 @@ const App: React.FC = () => {
           showAids={showAids}
           onToggleAids={setShowAids}
           embroideryState={{ text: embroideryText, font: embroideryFont, color: embroideryColor }}
+          letterAddons={letterAddons}
+          patchAddons={patchAddons}
         />
 
-        {showSuccess && (
+        {(showSuccess || isAddingToCart) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-xl animate-in fade-in duration-500">
             <div className="bg-white rounded-[64px] p-20 max-w-xl w-full text-center shadow-2xl scale-in-center">
-              <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-10 text-emerald-500">
-                <CheckCircle2 size={64} />
+              <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-10 ${showSuccess ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
+                {showSuccess ? <CheckCircle2 size={64} /> : <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600" />}
               </div>
-              <h3 className="text-4xl font-black text-slate-900 mb-6 uppercase tracking-tighter">Saving Design</h3>
-              <p className="text-slate-400 font-bold uppercase text-[11px] tracking-widest mb-10">Hold tight, we're building your cart...</p>
+              <h3 className="text-4xl font-black text-slate-900 mb-6 uppercase tracking-tighter">
+                {showSuccess ? 'Saving Design' : 'Creating Cart'}
+              </h3>
+              <p className="text-slate-400 font-bold uppercase text-[11px] tracking-widest mb-10">
+                {showSuccess ? "Hold tight, we're building your cart..." : "Preparing your custom items..."}
+              </p>
               <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div className="h-full bg-pink-600 animate-[loading_2s_ease-in-out_infinite]" />
+                <div className={`h-full bg-pink-600 transition-all duration-500 ${showSuccess ? 'w-full' : 'w-1/2 animate-pulse'}`} />
               </div>
             </div>
           </div>
