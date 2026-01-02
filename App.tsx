@@ -7,10 +7,13 @@ import {
   ChevronLeft,
   CheckCircle2,
   Share2,
-  ChevronDown
+  ChevronDown,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { Product, Addon, CanvasElement, CustomizationData, CustomizationMode } from './types';
-import { fetchShopifyProducts, addToCart } from './services/shopifyService';
+import { fetchShopifyProducts, addToCart, isShopifyConnected } from './services/shopifyService';
+import { getDesignSuggestions } from './services/geminiService';
 import CustomizerCanvas from './components/Customizer/Canvas';
 import Sidebar from './components/Customizer/Sidebar';
 
@@ -25,6 +28,10 @@ const App: React.FC = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showAids, setShowAids] = useState(true);
+  
+  // AI States
+  const [aiInspiration, setAiInspiration] = useState<string>('');
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   // Single-instance embroidery state
   const [embroideryText, setEmbroideryText] = useState('');
@@ -38,15 +45,23 @@ const App: React.FC = () => {
         setSelectedProduct(res[0]);
         setSelectedVariantId(res[0].variantId);
       }
-    }).catch(err => {
-      console.error("Failed to fetch products:", err);
     });
   }, []);
+
+  const fetchAiSuggestions = async () => {
+    if (!selectedProduct) return;
+    setIsLoadingAi(true);
+    const addons = canvasElements.map(el => el.addon?.title || el.text || 'Element');
+    const suggestion = await getDesignSuggestions(selectedProduct.title, addons);
+    setAiInspiration(suggestion);
+    setIsLoadingAi(false);
+  };
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
     setSelectedVariantId(product.variantId);
     setStep('details');
+    setAiInspiration(''); // Reset for new product
   };
 
   const addAddonToCanvas = (addon: Addon) => {
@@ -157,22 +172,28 @@ const App: React.FC = () => {
     try {
       const checkoutUrl = await addToCart(customization);
       setShowSuccess(true);
-      
-      // Redirect to Shopify checkout after a brief delay to show success UI
       setTimeout(() => {
         window.location.href = checkoutUrl;
       }, 2000);
     } catch (err) {
       console.error("Cart Error:", err);
-      alert("There was an issue adding your custom item to the cart. Please try again.");
+      alert("Failed to create cart. Try again.");
     } finally {
       setIsAddingToCart(false);
     }
   };
 
+  const MockBadge = () => !isShopifyConnected() ? (
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/10 backdrop-blur-md rounded-full border border-slate-900/10 flex items-center gap-2 z-[100] pointer-events-none">
+      <Zap size={12} className="text-slate-900" />
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Demo Mode</span>
+    </div>
+  ) : null;
+
   if (step === 'selection') {
     return (
       <div className="min-h-screen bg-white">
+        <MockBadge />
         <header className="px-8 py-20 max-w-7xl mx-auto flex flex-col items-center">
           <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter leading-none">STYLN CUSTOM</h1>
           <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.5em]">Choose Your Base Piece</p>
@@ -182,18 +203,13 @@ const App: React.FC = () => {
           {products.length === 0 ? (
             <div className="text-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
-              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Fetching Products...</p>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Fetching Collection...</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
               {products.map(product => (
                 <div key={product.id} className="group cursor-pointer" onClick={() => handleProductSelect(product)}>
                   <div className="aspect-[4/5] bg-slate-50 relative overflow-hidden mb-10 flex items-center justify-center p-16 rounded-[48px] group-hover:bg-slate-100 transition-all duration-700">
-                    <div className="absolute inset-0 opacity-[0.03] flex flex-wrap justify-around items-center rotate-[-15deg] pointer-events-none">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <span key={i} className="text-2xl font-black text-slate-900 m-6">STYLN</span>
-                      ))}
-                    </div>
                     <img src={product.imageUrl} alt={product.title} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-1000 drop-shadow-xl" />
                   </div>
                   <h3 className="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tight">{product.title}</h3>
@@ -210,37 +226,37 @@ const App: React.FC = () => {
   if (step === 'details' && selectedProduct) {
     return (
       <div className="h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
+        <MockBadge />
         <div className="flex-[3] relative flex items-center justify-center p-20 bg-white h-1/2 lg:h-auto overflow-hidden">
           <button onClick={() => setStep('selection')} className="absolute top-12 left-12 p-4 text-slate-300 hover:text-slate-900 transition-colors z-10">
             <ChevronLeft size={36} />
           </button>
-          <div className="absolute top-12 right-12 flex gap-4 z-10">
-             <button className="p-4 bg-white shadow-xl rounded-full text-slate-400 hover:text-slate-900 transition-all">
-                <Share2 size={20} />
-              </button>
-          </div>
-          <div className="absolute inset-0 opacity-[0.02] flex flex-wrap justify-around items-center rotate-[-15deg] pointer-events-none select-none">
-            {Array.from({ length: 30 }).map((_, i) => (
-              <span key={i} className="text-3xl font-black text-slate-900 m-12">STYLN</span>
-            ))}
-          </div>
           <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="max-w-full max-h-[85%] object-contain drop-shadow-2xl z-0" />
         </div>
 
         <div className="flex-[2] bg-slate-50 p-16 lg:p-24 overflow-y-auto h-1/2 lg:h-auto border-l border-slate-100">
           <div className="max-w-md mx-auto h-full flex flex-col">
-            <h2 className="text-5xl font-black text-slate-900 mb-16 leading-[1] uppercase tracking-tighter">{selectedProduct.title}</h2>
+            <h2 className="text-5xl font-black text-slate-900 mb-12 leading-[1] uppercase tracking-tighter">{selectedProduct.title}</h2>
             
-            <div className="space-y-16 flex-1">
-              <div className="grid grid-cols-2 gap-12">
-                <div>
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Material</h4>
-                  <p className="text-slate-900 font-black text-xs uppercase">{selectedProduct.material || 'Premium'}</p>
+            <div className="space-y-12 flex-1">
+              <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles size={18} className="text-pink-600" />
+                  <h4 className="text-[10px] font-black text-pink-600 uppercase tracking-widest">AI Stylist Advice</h4>
                 </div>
-                <div>
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dimensions</h4>
-                  <p className="text-slate-900 font-black text-xs uppercase">{selectedProduct.dimensions || 'Standard'}</p>
-                </div>
+                {aiInspiration ? (
+                  <p className="text-slate-600 text-sm font-medium leading-relaxed italic animate-in fade-in slide-in-from-bottom-2">
+                    "{aiInspiration}"
+                  </p>
+                ) : (
+                  <button 
+                    onClick={fetchAiSuggestions}
+                    disabled={isLoadingAi}
+                    className="text-slate-400 hover:text-pink-600 text-sm font-bold uppercase tracking-tight transition-colors flex items-center gap-2"
+                  >
+                    {isLoadingAi ? 'Consulting Gemini...' : 'Get Styling Ideas'}
+                  </button>
+                )}
               </div>
 
               <div>
@@ -250,26 +266,24 @@ const App: React.FC = () => {
 
               <div className="space-y-4">
                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Personalisation</h4>
-                 <div className="relative">
-                    <button 
-                      onClick={() => setStep('customizer')}
-                      className="w-full flex items-center justify-between p-6 border-2 border-pink-600 rounded-3xl text-pink-600 font-black tracking-[0.2em] uppercase text-[11px] hover:bg-pink-50 transition-all shadow-2xl shadow-pink-100"
-                    >
-                      Pick Personalisation
-                      <ChevronDown className="-rotate-90" size={20} />
-                    </button>
-                 </div>
+                 <button 
+                   onClick={() => setStep('customizer')}
+                   className="w-full flex items-center justify-between p-6 border-2 border-pink-600 rounded-3xl text-pink-600 font-black tracking-[0.2em] uppercase text-[11px] hover:bg-pink-50 transition-all shadow-2xl shadow-pink-100"
+                 >
+                   Start Customizing
+                   <Sparkles size={16} />
+                 </button>
               </div>
             </div>
 
-            <div className="mt-20 pt-12 border-t border-slate-200">
-              <div className="flex items-center justify-between mb-10">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtotal</span>
+            <div className="mt-12 pt-8 border-t border-slate-200">
+              <div className="flex items-center justify-between mb-8">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Price</span>
                 <span className="text-4xl font-black text-slate-900 tracking-tighter">{selectedProduct.price.toFixed(2)} {selectedProduct.currency}</span>
               </div>
-              <div className="flex gap-6">
-                <button onClick={() => setStep('selection')} className="flex-1 py-6 bg-slate-200 text-slate-500 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-slate-300 transition-all">Back</button>
-                <button onClick={() => setStep('customizer')} className="flex-[2] py-6 bg-pink-600 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-pink-700 transition-all shadow-2xl shadow-pink-200">Customize Now</button>
+              <div className="flex gap-4">
+                <button onClick={() => setStep('selection')} className="flex-1 py-5 bg-slate-200 text-slate-500 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-slate-300">Back</button>
+                <button onClick={() => setStep('customizer')} className="flex-[2] py-5 bg-pink-600 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-pink-700 shadow-xl shadow-pink-200">Customize</button>
               </div>
             </div>
           </div>
@@ -283,17 +297,21 @@ const App: React.FC = () => {
 
     return (
       <div className="h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
+        <MockBadge />
         <div className="flex-[3] relative flex flex-col h-2/3 lg:h-auto overflow-hidden">
           <header className="h-24 flex items-center justify-between px-12 border-b border-slate-50 bg-white z-30">
             <button onClick={() => setStep('details')} className="text-slate-300 hover:text-slate-900 transition-colors p-3">
               <ChevronLeft size={32} />
             </button>
-            <div className="flex gap-5">
-              <button onClick={clearAll} className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors px-6 py-3 border border-slate-100 rounded-full bg-white shadow-sm">
-                <Trash size={14} /> Clear All
+            <div className="flex gap-4">
+              <button 
+                onClick={fetchAiSuggestions}
+                className="flex items-center gap-2 text-[10px] font-black uppercase text-pink-600 hover:bg-pink-50 transition-colors px-6 py-3 border border-pink-100 rounded-full bg-white shadow-sm"
+              >
+                <Sparkles size={14} /> Magic Suggest
               </button>
-              <button className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 transition-colors px-6 py-3 border border-slate-100 rounded-full bg-white shadow-sm">
-                <Download size={14} /> Download
+              <button onClick={clearAll} className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors px-6 py-3 border border-slate-100 rounded-full bg-white shadow-sm">
+                <Trash size={14} /> Reset
               </button>
             </div>
           </header>
@@ -313,9 +331,9 @@ const App: React.FC = () => {
               {selectedElementId && (
                 <button 
                   onClick={deleteElement}
-                  className="absolute bottom-16 right-16 bg-red-500 text-white p-6 rounded-full shadow-[0_20px_60px_rgba(239,68,68,0.4)] hover:bg-red-600 transition-all scale-in-center z-40"
+                  className="absolute bottom-12 right-12 bg-red-500 text-white p-5 rounded-full shadow-2xl hover:bg-red-600 transition-all z-40"
                 >
-                  <Trash2 size={32} />
+                  <Trash2 size={24} />
                 </button>
               )}
           </div>
@@ -341,22 +359,14 @@ const App: React.FC = () => {
 
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-xl animate-in fade-in duration-500">
-            <div className="bg-white rounded-[64px] p-20 max-w-xl w-full text-center shadow-[0_64px_256px_rgba(0,0,0,0.15)] scale-in-center">
-              <div className="w-28 h-28 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-12 text-emerald-500">
-                <CheckCircle2 size={80} />
+            <div className="bg-white rounded-[64px] p-20 max-w-xl w-full text-center shadow-2xl scale-in-center">
+              <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-10 text-emerald-500">
+                <CheckCircle2 size={64} />
               </div>
-              <h3 className="text-5xl font-black text-slate-900 mb-6 uppercase leading-none tracking-tighter">Design Saved!</h3>
-              <p className="text-slate-400 font-bold uppercase text-[11px] tracking-[0.3em] mb-14">Redirecting to Shopify Checkout...</p>
-              <div className="flex gap-4">
-                 <button 
-                  onClick={() => setShowSuccess(false)}
-                  className="flex-1 bg-slate-100 text-slate-900 py-6 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-slate-200 transition-all"
-                >
-                  Stay Here
-                </button>
-                <div className="flex-1 bg-pink-600 text-white py-6 rounded-full font-black uppercase text-[11px] tracking-widest animate-pulse flex items-center justify-center">
-                  Loading...
-                </div>
+              <h3 className="text-4xl font-black text-slate-900 mb-6 uppercase tracking-tighter">Saving Design</h3>
+              <p className="text-slate-400 font-bold uppercase text-[11px] tracking-widest mb-10">Hold tight, we're building your cart...</p>
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className="h-full bg-pink-600 animate-[loading_2s_ease-in-out_infinite]" />
               </div>
             </div>
           </div>
