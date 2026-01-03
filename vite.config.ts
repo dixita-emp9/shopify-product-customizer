@@ -19,16 +19,10 @@ export default defineConfig({
   ],
   ssr: {
     optimizeDeps: {
-      include: ['react-konva', 'konva', 'lucide-react', '@google/genai'],
+      include: ['react-konva', 'konva'],
     },
-    // Ensure canvas and UI libraries are handled correctly in the Oxygen worker environment
-    noExternal: ['react-konva', 'konva', 'lucide-react'],
   },
   optimizeDeps: {
     include: ['react', 'react-dom', '@remix-run/react'],
-  },
-  build: {
-    // Oxygen-specific optimizations
-    assetsInlineLimit: 0,
   }
 });
