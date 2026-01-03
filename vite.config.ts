@@ -1,23 +1,28 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
+import {defineConfig} from 'vite';
+import {hydrogen} from '@shopify/hydrogen/vite';
+import {remix} from '@remix-run/dev';
+import tsconfigPaths from 'vite-tsconfig-paths';
+
+export default defineConfig({
+  plugins: [
+    hydrogen(),
+    remix({
+      buildDirectory: 'dist',
+      future: {
+        v3_fetcherPersist: true,
+        v3_relativeRoutingPath: true,
+        v3_throwAbortReason: true,
       },
-      plugins: [react()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      }
-    };
+    }),
+    tsconfigPaths(),
+  ],
+  ssr: {
+    optimizeDeps: {
+      include: ['react-konva', 'konva'],
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@remix-run/react'],
+  }
 });

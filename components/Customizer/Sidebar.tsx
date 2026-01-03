@@ -25,6 +25,7 @@ interface SidebarProps {
   onModeChange: (mode: CustomizationMode) => void;
   onAddAddon: (addon: Addon) => void;
   onUpdateEmbroidery: (text: string, font: string, color: string) => void;
+  // Fix: Removed space from onAddVinyl to fix syntax error in interface
   onAddVinyl: (file: File) => void;
   totalPrice: number;
   currency: string;
@@ -65,8 +66,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     setDrillDownGroup(null);
   };
 
-  // Group letters by their base color for selection
-  const letterGroups = Array.from(new Set(letterAddons.map(a => a.baseColorGroup))).filter(Boolean);
+  // Fix: Explicitly type letterGroups as string[] and use a type predicate to narrow from unknown
+  const letterGroups: string[] = Array.from(new Set(letterAddons.map(a => a.baseColorGroup))).filter((group): group is string => Boolean(group));
   
   // Find a representative addon for the color group UI
   const getGroupAddon = (group: string) => letterAddons.find(a => a.baseColorGroup === group);
@@ -164,16 +165,16 @@ const Sidebar: React.FC<SidebarProps> = ({
               ) : (
                 <div className="grid grid-cols-3 gap-5">
                   {letterGroups.map((group) => {
-                    const addon = getGroupAddon(group!);
+                    const addon = getGroupAddon(group);
                     if (!addon) return null;
                     return (
                       <div 
                         key={group}
                         className="group flex flex-col items-center cursor-pointer"
-                        onClick={() => setDrillDownGroup(group!)}
+                        onClick={() => setDrillDownGroup(group)}
                       >
                         <div className="w-full aspect-square bg-white rounded-2xl p-4 border border-slate-100 group-hover:border-pink-500 transition-all flex items-center justify-center mb-3 shadow-sm">
-                          <img src={addon.imageUrl} alt={group!} className="max-w-full max-h-full object-contain" />
+                          <img src={addon.imageUrl} alt={group} className="max-w-full max-h-full object-contain" />
                         </div>
                         <span className="text-[9px] uppercase font-black text-slate-400 text-center leading-none tracking-tight">
                           {group}
