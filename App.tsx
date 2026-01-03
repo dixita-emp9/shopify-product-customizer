@@ -9,18 +9,25 @@ import {
   Zap
 } from 'lucide-react';
 import { Product, Addon, AddonCategory, CanvasElement, CustomizationData, CustomizationMode } from './types';
-import { fetchShopifyProducts, fetchShopifyAddons, addToCart, isShopifyConnected } from './services/shopifyService';
+import { addToCart, isShopifyConnected } from './services/shopifyService';
 import { getDesignSuggestions } from './services/geminiService';
 import CustomizerCanvas from './components/Customizer/Canvas';
 import Sidebar from './components/Customizer/Sidebar';
 
-const App: React.FC = () => {
+interface AppProps {
+  initialProducts: Product[];
+  initialLetterAddons: Addon[];
+  initialPatchAddons: Addon[];
+}
+
+const App: React.FC<AppProps> = ({ initialProducts, initialLetterAddons, initialPatchAddons }) => {
   const [step, setStep] = useState<'selection' | 'details' | 'customizer'>('selection');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [letterAddons, setLetterAddons] = useState<Addon[]>([]);
-  const [patchAddons, setPatchAddons] = useState<Addon[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedVariantId, setSelectedVariantId] = useState<string>('');
+  const [products] = useState<Product[]>(initialProducts);
+  const [letterAddons] = useState<Addon[]>(initialLetterAddons);
+  const [patchAddons] = useState<Addon[]>(initialPatchAddons);
+  
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(initialProducts[0] || null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(initialProducts[0]?.variantId || '');
   const [customMode, setCustomMode] = useState<CustomizationMode>('COLOR');
   const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
@@ -36,30 +43,6 @@ const App: React.FC = () => {
   const [embroideryText, setEmbroideryText] = useState('');
   const [embroideryFont, setEmbroideryFont] = useState('cursive');
   const [embroideryColor, setEmbroideryColor] = useState('#000000');
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [prodRes, lettersRes, patchesRes] = await Promise.all([
-          fetchShopifyProducts(),
-          fetchShopifyAddons('letters', AddonCategory.LETTERS),
-          fetchShopifyAddons('patches', AddonCategory.PATCHES)
-        ]);
-        
-        setProducts(prodRes);
-        setLetterAddons(lettersRes);
-        setPatchAddons(patchesRes);
-        
-        if (prodRes.length > 0) {
-          setSelectedProduct(prodRes[0]);
-          setSelectedVariantId(prodRes[0].variantId);
-        }
-      } catch (err) {
-        console.error("Critical error loading initial data:", err);
-      }
-    };
-    loadData();
-  }, []);
 
   const fetchAiSuggestions = async () => {
     if (!selectedProduct) return;
@@ -219,8 +202,7 @@ const App: React.FC = () => {
         <main className="max-w-7xl mx-auto px-8 pb-32">
           {products.length === 0 ? (
             <div className="text-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
-              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Fetching Collection...</p>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No products found.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">

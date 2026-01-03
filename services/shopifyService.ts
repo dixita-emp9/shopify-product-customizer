@@ -10,9 +10,6 @@ const SHOPIFY_STORE_DOMAIN: string = 'thehappytribe.myshopify.com';
 const SHOPIFY_STOREFRONT_ACCESS_TOKEN: string = '6765755d3621848f5e51817e0b265309'; 
 const API_VERSION = '2024-04';
 
-/**
- * Helper to check if the app is connected to a real Shopify instance.
- */
 export const isShopifyConnected = () => {
   const isDefault = SHOPIFY_STORE_DOMAIN === 'your-store-name.myshopify.com';
   const hasToken = SHOPIFY_STOREFRONT_ACCESS_TOKEN && SHOPIFY_STOREFRONT_ACCESS_TOKEN.length > 10;
@@ -111,80 +108,88 @@ async function shopifyFetch({ query, variables = {} }: { query: string; variable
       body: JSON.stringify({ query, variables }),
     });
 
-    const result = await response.json();
+    // Fix: Cast result to any to fix type 'unknown' errors on properties errors and data
+    const result = (await response.json()) as any;
     if (result.errors) console.error('Shopify GraphQL Errors:', result.errors);
     if (!response.ok) return null;
     return result.data || null;
   } catch (error) {
-    if (isShopifyConnected()) console.error('Shopify Network Error:', error);
+    console.error('Shopify API Fetch Error:', error);
     return null;
   }
 }
 
 export const fetchShopifyProducts = async (): Promise<Product[]> => {
-  const data = await shopifyFetch({ query: GET_PRODUCTS_QUERY, variables: { first: 50 } });
-  if (!data?.products) return MOCK_PRODUCTS;
+  try {
+    const data = await shopifyFetch({ query: GET_PRODUCTS_QUERY, variables: { first: 50 } });
+    if (!data?.products) return MOCK_PRODUCTS;
 
-  return data.products.edges.map((edge: any) => {
-    const node = edge.node;
-    const variants = node.variants.edges.map((vEdge: any) => vEdge.node);
-    const firstVariant = variants.find((v: any) => v.availableForSale) || variants[0];
-    const mainImageUrl = node.images.edges[0]?.node?.url || (firstVariant?.image?.url || '');
-    
-    return {
-      id: node.id,
-      variantId: firstVariant?.id || '',
-      title: node.title,
-      handle: node.handle,
-      price: parseFloat(firstVariant?.price?.amount || '0'),
-      currency: firstVariant?.price?.currencyCode || 'AED',
-      imageUrl: mainImageUrl,
-      description: node.description,
-      variants: variants.map((v: any) => ({
-        id: v.id,
-        title: v.title,
-        imageUrl: v.image?.url || mainImageUrl,
-        color: v.selectedOptions.find((o: any) => ['color', 'colour', 'style'].includes(o.name.toLowerCase()))?.value || '#000000'
-      }))
-    };
-  });
+    return data.products.edges.map((edge: any) => {
+      const node = edge.node;
+      const variants = node.variants.edges.map((vEdge: any) => vEdge.node);
+      const firstVariant = variants.find((v: any) => v.availableForSale) || variants[0];
+      const mainImageUrl = node.images.edges[0]?.node?.url || (firstVariant?.image?.url || '');
+      
+      return {
+        id: node.id,
+        variantId: firstVariant?.id || '',
+        title: node.title,
+        handle: node.handle,
+        price: parseFloat(firstVariant?.price?.amount || '0'),
+        currency: firstVariant?.price?.currencyCode || 'AED',
+        imageUrl: mainImageUrl,
+        description: node.description,
+        variants: variants.map((v: any) => ({
+          id: v.id,
+          title: v.title,
+          imageUrl: v.image?.url || mainImageUrl,
+          color: v.selectedOptions.find((o: any) => ['color', 'colour', 'style'].includes(o.name.toLowerCase()))?.value || '#000000'
+        }))
+      };
+    });
+  } catch (e) {
+    return MOCK_PRODUCTS;
+  }
 };
 
 export const fetchShopifyAddons = async (collectionHandle: string, category: AddonCategory): Promise<Addon[]> => {
-  const data = await shopifyFetch({ 
-    query: GET_COLLECTION_QUERY, 
-    variables: { handle: collectionHandle, first: 100 } 
-  });
-  
-  if (!data?.collection?.products) {
-    console.warn(`No addons found for collection: ${collectionHandle}, using partial mock fallback.`);
-    return MOCK_ADDONS.filter(a => a.category === category);
-  }
+  try {
+    const data = await shopifyFetch({ 
+      query: GET_COLLECTION_QUERY, 
+      variables: { handle: collectionHandle, first: 100 } 
+    });
+    
+    if (!data?.collection?.products) {
+      return MOCK_ADDONS.filter(a => a.category === category);
+    }
 
-  const addons: Addon[] = [];
-  data.collection.products.edges.forEach((edge: any) => {
-    const node = edge.node;
-    node.variants.edges.forEach((vEdge: any) => {
-      const v = vEdge.node;
-      const colorOption = v.selectedOptions.find((o: any) => ['color', 'colour'].includes(o.name.toLowerCase()));
-      const letterOption = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'letter');
-      
-      addons.push({
-        id: v.id,
-        productId: node.id,
-        variantId: v.id,
-        category: category,
-        title: v.title === 'Default Title' ? node.title : `${node.title} - ${v.title}`,
-        imageUrl: v.image?.url || '',
-        price: parseFloat(v.price.amount),
-        colorName: colorOption?.value,
-        letter: letterOption?.value || node.title.charAt(0).toUpperCase(),
-        baseColorGroup: colorOption?.value
+    const addons: Addon[] = [];
+    data.collection.products.edges.forEach((edge: any) => {
+      const node = edge.node;
+      node.variants.edges.forEach((vEdge: any) => {
+        const v = vEdge.node;
+        const colorOption = v.selectedOptions.find((o: any) => ['color', 'colour'].includes(o.name.toLowerCase()));
+        const letterOption = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'letter');
+        
+        addons.push({
+          id: v.id,
+          productId: node.id,
+          variantId: v.id,
+          category: category,
+          title: v.title === 'Default Title' ? node.title : `${node.title} - ${v.title}`,
+          imageUrl: v.image?.url || '',
+          price: parseFloat(v.price.amount),
+          colorName: colorOption?.value,
+          letter: letterOption?.value || node.title.charAt(0).toUpperCase(),
+          baseColorGroup: colorOption?.value
+        });
       });
     });
-  });
 
-  return addons;
+    return addons;
+  } catch (e) {
+    return MOCK_ADDONS.filter(a => a.category === category);
+  }
 };
 
 export const addToCart = async (customization: CustomizationData): Promise<string> => {
