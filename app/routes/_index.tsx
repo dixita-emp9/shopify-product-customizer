@@ -1,30 +1,9 @@
 
-import {useLoaderData} from '@remix-run/react';
-import {json, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
-import React, {Suspense} from 'react';
 import App from '../../App';
-import {fetchShopifyProducts, fetchShopifyAddons} from '../../services/shopifyService';
-import {AddonCategory} from '../../types';
-
-export async function loader({context}: LoaderFunctionArgs) {
-  // Fetch data in parallel on the server
-  const [products, letterAddons, patchAddons] = await Promise.all([
-    fetchShopifyProducts(),
-    fetchShopifyAddons('letters', AddonCategory.LETTERS),
-    fetchShopifyAddons('patches', AddonCategory.PATCHES),
-  ]);
-
-  return json({
-    products,
-    letterAddons,
-    patchAddons,
-  });
-}
+import React from 'react';
 
 export default function Index() {
-  const data = useLoaderData<typeof loader>();
-  
-  // Guard for Konva browser-only dependencies
+  // Guard to ensure browser-only canvas logic doesn't run during SSR
   const [isClient, setIsClient] = React.useState(false);
   React.useEffect(() => {
     setIsClient(true);
@@ -38,11 +17,5 @@ export default function Index() {
     );
   }
 
-  return (
-    <App 
-      initialProducts={data.products} 
-      initialLetterAddons={data.letterAddons} 
-      initialPatchAddons={data.patchAddons} 
-    />
-  );
+  return <App />;
 }

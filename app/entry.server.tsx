@@ -9,8 +9,9 @@ export default async function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext,
 ) {
+  // Cast remixContext to any to satisfy the type requirement of the context prop in RemixServer
   const body = await renderToReadableStream(
-    <RemixServer context={remixContext} url={request.url} />,
+    <RemixServer context={remixContext as any} url={request.url} />,
     {
       signal: request.signal,
       onError(error: unknown) {

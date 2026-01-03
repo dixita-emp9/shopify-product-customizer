@@ -43,49 +43,44 @@ export const LETTER_COLORS = [
   'Navy Blue', 'Black', 'Yellow', 'Pastel Orange', 'Orange', 'Red'
 ];
 
+export const PATCH_DESIGNS = [
+  { name: 'Smiley Face', url: 'https://cdn-icons-png.flaticon.com/512/742/742751.png' },
+  { name: 'Retro Rocket', url: 'https://cdn-icons-png.flaticon.com/512/1043/1043444.png' },
+  { name: 'Peace Sign', url: 'https://cdn-icons-png.flaticon.com/512/1044/1044237.png' },
+  { name: 'Heart Sparkle', url: 'https://cdn-icons-png.flaticon.com/512/1077/1077035.png' },
+  { name: 'Lucky Star', url: 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png' }
+];
+
 export const MOCK_ADDONS: Addon[] = [
-  ...LETTER_COLORS.map((color, index) => ({
-    id: `letter_base_${color}`,
-    productId: `gid://shopify/Product/700${index}`,
-    variantId: `gid://shopify/ProductVariant/7000${index}`,
-    category: AddonCategory.LETTERS,
-    title: `${color} Letter`,
-    colorName: color,
-    letter: 'A',
-    imageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=A&backgroundColor=${getColorHex(color)}&fontSize=60`,
-    price: 8.0,
-    baseColorGroup: color,
-  })),
-  {
-    id: 'patch_base_1',
-    productId: 'gid://shopify/Product/801',
-    variantId: 'gid://shopify/ProductVariant/8010',
-    category: AddonCategory.PATCHES,
-    title: 'Retro Rocket',
-    colorName: 'Original',
-    imageUrl: 'https://cdn-icons-png.flaticon.com/512/1043/1043444.png',
-    price: 15.0,
-  },
-  {
-    id: 'patch_base_2',
-    productId: 'gid://shopify/Product/802',
-    variantId: 'gid://shopify/ProductVariant/8020',
-    category: AddonCategory.PATCHES,
-    title: 'Peace Sign',
-    colorName: 'Original',
-    imageUrl: 'https://cdn-icons-png.flaticon.com/512/1044/1044237.png',
-    price: 12.0,
-  },
-  {
-    id: 'patch_base_3',
-    productId: 'gid://shopify/Product/803',
-    variantId: 'gid://shopify/ProductVariant/8030',
-    category: AddonCategory.PATCHES,
-    title: 'Smiley Face',
-    colorName: 'Yellow',
-    imageUrl: 'https://cdn-icons-png.flaticon.com/512/742/742751.png',
-    price: 10.0,
-  }
+  // Generate a full alphabet for each color
+  ...LETTER_COLORS.flatMap((color, cIdx) => 
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((char, charIdx) => ({
+      id: `letter_${color}_${char}`,
+      productId: `gid://shopify/Product/700${cIdx}${charIdx}`,
+      variantId: `gid://shopify/ProductVariant/7000${cIdx}${charIdx}`,
+      category: AddonCategory.LETTERS,
+      title: `${color} Letter ${char}`,
+      colorName: color,
+      letter: char,
+      imageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${char}&backgroundColor=${getColorHex(color)}&fontSize=60`,
+      price: 8.0,
+      baseColorGroup: color,
+    }))
+  ),
+  // Generate patches with colors
+  ...PATCH_DESIGNS.flatMap((design, dIdx) => 
+    ['Yellow', 'Pink', 'Blue', 'Black'].map((color, cIdx) => ({
+      id: `patch_${design.name}_${color}`,
+      productId: `gid://shopify/Product/800${dIdx}${cIdx}`,
+      variantId: `gid://shopify/ProductVariant/8000${dIdx}${cIdx}`,
+      category: AddonCategory.PATCHES,
+      title: `${design.name} - ${color}`,
+      colorName: color,
+      imageUrl: design.url, // In real Shopify, these would be colored variants
+      price: 15.0,
+      designGroup: design.name
+    }))
+  )
 ];
 
 export const EMBROIDERY_FONTS = [
