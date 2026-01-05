@@ -1,0 +1,54 @@
+{
+  "__index-Rlee23r_.js": {
+    "file": "assets/_index-Rlee23r_.js",
+    "name": "_index",
+    "imports": [
+      "_chunk-TMI4QPZX-CWrFqL2g.js"
+    ],
+    "dynamicImports": [
+      "components/Customizer/CanvasClient.tsx"
+    ]
+  },
+  "_chunk-TMI4QPZX-CWrFqL2g.js": {
+    "file": "assets/chunk-TMI4QPZX-CWrFqL2g.js",
+    "name": "chunk-TMI4QPZX"
+  },
+  "app/entry.client.tsx": {
+    "file": "assets/entry.client-u8nAT-yv.js",
+    "name": "entry.client",
+    "src": "app/entry.client.tsx",
+    "isEntry": true,
+    "imports": [
+      "_chunk-TMI4QPZX-CWrFqL2g.js"
+    ]
+  },
+  "app/root.tsx?__react-router-build-client-route": {
+    "file": "assets/root-Baqi2R5Z.js",
+    "name": "root",
+    "src": "app/root.tsx?__react-router-build-client-route",
+    "isEntry": true,
+    "imports": [
+      "_chunk-TMI4QPZX-CWrFqL2g.js"
+    ]
+  },
+  "app/routes/_index.tsx?__react-router-build-client-route": {
+    "file": "assets/_index-JxamiJ9m.js",
+    "name": "_index",
+    "src": "app/routes/_index.tsx?__react-router-build-client-route",
+    "isEntry": true,
+    "imports": [
+      "__index-Rlee23r_.js",
+      "_chunk-TMI4QPZX-CWrFqL2g.js"
+    ]
+  },
+  "components/Customizer/CanvasClient.tsx": {
+    "file": "assets/CanvasClient-bQNcX7Hu.js",
+    "name": "CanvasClient",
+    "src": "components/Customizer/CanvasClient.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_chunk-TMI4QPZX-CWrFqL2g.js",
+      "__index-Rlee23r_.js"
+    ]
+  }
+}

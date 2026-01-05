@@ -1,0 +1,15 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "shopify-product-customizer"
+client_id = ""
+application_url = ""
+embedded = true
+
+[access_scopes]
+scopes = "write_products"
+
+[auth]
+redirect_urls = [ "http://localhost:3000/auth/callback" ]
+
+[webhooks]
+api_version = "2024-10"

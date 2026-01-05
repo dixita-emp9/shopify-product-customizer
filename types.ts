@@ -42,8 +42,7 @@ export interface Addon {
   price: number;
   colorName?: string;
   letter?: string;
-  baseColorGroup?: string; // For letters grouping
-  designGroup?: string;    // For patches grouping
+  baseColorGroup?: string; // For 2-level selection
 }
 
 export interface CanvasElement {

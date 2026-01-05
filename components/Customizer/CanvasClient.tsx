@@ -1,7 +1,8 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Stage, Layer, Image as KonvaImage, Transformer, Text as KonvaText, Rect } from 'react-konva';
 import { CanvasElement } from '../../types';
-import { Info } from 'lucide-react';
+import { Info, Move } from 'lucide-react';
 
 interface CanvasProps {
   backgroundImageUrl: string;
@@ -16,6 +17,7 @@ interface CanvasProps {
 
 const CustomTransformer = ({ trRef, isSelected }: any) => {
   useEffect(() => {
+    // Add check for layer existence before calling batchDraw
     if (isSelected && trRef.current && trRef.current.getLayer()) {
       trRef.current.getLayer().batchDraw();
     }
@@ -27,13 +29,12 @@ const CustomTransformer = ({ trRef, isSelected }: any) => {
     <Transformer
       ref={trRef}
       rotateEnabled={true}
-      anchorSize={18}
+      anchorSize={14}
       anchorStroke="#db2777"
       anchorFill="white"
-      anchorCornerRadius={12}
+      anchorCornerRadius={10}
       borderStroke="#db2777"
-      borderDash={[6, 6]}
-      borderStrokeWidth={2}
+      borderDash={[4, 4]}
       keepRatio={true}
       enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
     />
@@ -42,11 +43,11 @@ const CustomTransformer = ({ trRef, isSelected }: any) => {
 
 const URLImage = ({ src, x, y, width, height, rotation, isSelected, onSelect, onChange }: any) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+  // Fix: Initialize useRef with null to provide the expected 1 argument (initial value)
   const shapeRef = useRef<any>(null);
   const trRef = useRef<any>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const img = new window.Image();
     img.src = src;
     img.crossOrigin = "anonymous";
@@ -55,9 +56,7 @@ const URLImage = ({ src, x, y, width, height, rotation, isSelected, onSelect, on
 
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
-      if (trRef.current && typeof trRef.current.nodes === 'function') {
-        trRef.current.nodes([shapeRef.current]);
-      }
+      trRef.current.nodes([shapeRef.current]);
     }
   }, [isSelected]);
 
@@ -72,6 +71,7 @@ const URLImage = ({ src, x, y, width, height, rotation, isSelected, onSelect, on
         rotation={rotation}
         draggable
         ref={shapeRef}
+        // Fix: Wrap onSelect in an arrow function to avoid passing Konva event argument to a function that expects 0
         onClick={() => onSelect()}
         onTap={() => onSelect()}
         onDragEnd={(e) => {
@@ -99,14 +99,13 @@ const URLImage = ({ src, x, y, width, height, rotation, isSelected, onSelect, on
 };
 
 const CustomText = ({ text, fontFamily, color, x, y, rotation, isSelected, onSelect, onChange }: any) => {
+  // Fix: Initialize useRef with null to provide the expected 1 argument (initial value)
   const shapeRef = useRef<any>(null);
   const trRef = useRef<any>(null);
 
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
-      if (trRef.current && typeof trRef.current.nodes === 'function') {
-        trRef.current.nodes([shapeRef.current]);
-      }
+      trRef.current.nodes([shapeRef.current]);
     }
   }, [isSelected]);
 
@@ -117,14 +116,12 @@ const CustomText = ({ text, fontFamily, color, x, y, rotation, isSelected, onSel
         x={x}
         y={y}
         rotation={rotation}
-        fontSize={48}
+        fontSize={40}
         fontFamily={fontFamily}
         fill={color}
         draggable
         ref={shapeRef}
-        shadowColor="rgba(0,0,0,0.1)"
-        shadowBlur={10}
-        shadowOffset={{ x: 2, y: 2 }}
+        // Fix: Wrap onSelect in an arrow function to avoid passing Konva event argument to a function that expects 0
         onClick={() => onSelect()}
         onTap={() => onSelect()}
         onDragEnd={(e) => {
@@ -147,16 +144,13 @@ const CustomText = ({ text, fontFamily, color, x, y, rotation, isSelected, onSel
 
 const GridAids = ({ width, height }: { width: number, height: number }) => {
   const lines = [];
-  const spacing = 40;
+  const spacing = 50;
   for (let x = 0; x <= width; x += spacing) {
-    lines.push(<Rect key={`v-${x}`} x={x} y={0} width={1} height={height} fill="rgba(219, 39, 119, 0.08)" />);
+    lines.push(<Rect key={`v-${x}`} x={x} y={0} width={1} height={height} fill="rgba(219, 39, 119, 0.1)" />);
   }
   for (let y = 0; y <= height; y += spacing) {
-    lines.push(<Rect key={`h-${y}`} x={0} y={y} width={width} height={1} fill="rgba(219, 39, 119, 0.08)" />);
+    lines.push(<Rect key={`h-${y}`} x={0} y={y} width={width} height={1} fill="rgba(219, 39, 119, 0.1)" />);
   }
-  lines.push(<Rect key="v-center" x={width/2} y={0} width={2} height={height} fill="rgba(219, 39, 119, 0.2)" />);
-  lines.push(<Rect key="h-center" x={0} y={height/2} width={width} height={2} fill="rgba(219, 39, 119, 0.2)" />);
-  
   return <React.Fragment>{lines}</React.Fragment>;
 };
 
@@ -174,7 +168,6 @@ const CustomizerCanvas: React.FC<CanvasProps> = ({
   const stageRef = useRef<any>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const img = new window.Image();
     img.src = backgroundImageUrl;
     img.crossOrigin = "anonymous";
@@ -188,22 +181,18 @@ const CustomizerCanvas: React.FC<CanvasProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 relative overflow-hidden rounded-[64px] shadow-2xl border border-white">
-      <div className="bg-white/80 backdrop-blur-md border-b border-slate-100 p-5 px-10 flex items-center justify-between z-20">
-        <div className="flex items-center gap-3">
-          <Info className="text-pink-600" size={16} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Workspace</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-[10px] font-bold text-emerald-600 uppercase">Synchronized</span>
+    <div className="flex flex-col h-full w-full bg-white relative overflow-hidden">
+      <div className="bg-pink-50 border-b border-pink-100 p-3 px-6 flex items-start gap-3 z-20">
+        <Info className="text-pink-600 shrink-0 mt-0.5" size={18} />
+        <div className="text-pink-800 text-[11px] font-bold uppercase tracking-tight">
+          <p>Letters: 2 lines, max 5 chars each • Embroidery: 1 line, max 12 chars</p>
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center bg-white relative p-10">
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none overflow-hidden select-none flex flex-wrap justify-around items-center rotate-[-25deg]">
-          {Array.from({ length: 48 }).map((_, i) => (
-            <span key={i} className="text-3xl font-black text-slate-900 m-10">STYLN BRAND</span>
+      <div className="flex-1 flex items-center justify-center bg-white relative p-4">
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none overflow-hidden select-none flex flex-wrap justify-around items-center rotate-[-15deg]">
+          {Array.from({ length: 40 }).map((_, i) => (
+            <span key={i} className="text-2xl font-black text-slate-900 m-8">STYLN</span>
           ))}
         </div>
 
@@ -213,7 +202,7 @@ const CustomizerCanvas: React.FC<CanvasProps> = ({
           onMouseDown={handleStageClick}
           onTouchStart={handleStageClick}
           ref={stageRef}
-          className="shadow-[0_40px_100px_rgba(0,0,0,0.1)] bg-white rounded-[40px] border border-slate-50 overflow-hidden"
+          className="shadow-2xl bg-white rounded-2xl border border-slate-100 overflow-hidden"
         >
           <Layer>
             {bgImage && (
@@ -280,13 +269,6 @@ const CustomizerCanvas: React.FC<CanvasProps> = ({
             })}
           </Layer>
         </Stage>
-      </div>
-
-      <div className="absolute bottom-10 left-10 pointer-events-none z-20">
-         <div className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-2xl p-4 flex flex-col gap-1 shadow-sm">
-           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Dimensions</span>
-           <span className="text-[11px] font-black text-slate-900 uppercase">1:1 High-Res Preview</span>
-         </div>
       </div>
     </div>
   );

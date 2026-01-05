@@ -1,22 +1,12 @@
-
-import { Product, Addon, AddonCategory, CustomizationData } from '../types';
 import { MOCK_PRODUCTS, MOCK_ADDONS } from '../constants';
+import { Product, Addon, AddonCategory, CustomizationData } from '../types';
 
-/**
- * CONFIGURATION: 
- * Set these values to connect your live Shopify store.
- */
-const SHOPIFY_STORE_DOMAIN: string = 'thehappytribe.myshopify.com';
-const SHOPIFY_STOREFRONT_ACCESS_TOKEN: string = '6765755d3621848f5e51817e0b265309'; 
+const SHOPIFY_STORE_DOMAIN = 'thehappytribe.myshopify.com';
+const SHOPIFY_STOREFRONT_ACCESS_TOKEN = '6765755d3621848f5e51817e0b265309';
 const API_VERSION = '2024-04';
 
-/**
- * Helper to check if the app is connected to a real Shopify instance.
- */
 export const isShopifyConnected = () => {
-  const isDefault = SHOPIFY_STORE_DOMAIN === 'your-store-name.myshopify.com';
-  const hasToken = SHOPIFY_STOREFRONT_ACCESS_TOKEN && SHOPIFY_STOREFRONT_ACCESS_TOKEN.length > 10;
-  return !isDefault && !!SHOPIFY_STORE_DOMAIN && hasToken;
+  return SHOPIFY_STOREFRONT_ACCESS_TOKEN.length > 10;
 };
 
 const GET_PRODUCTS_QUERY = `
@@ -96,7 +86,7 @@ const GET_COLLECTION_QUERY = `
   }
 `;
 
-async function shopifyFetch({ query, variables = {} }: { query: string; variables?: any }) {
+async function shopifyFetch<T>({ query, variables = {} }: { query: string; variables?: any }): Promise<T | null> {
   if (!isShopifyConnected()) return null;
 
   const endpoint = `https://${SHOPIFY_STORE_DOMAIN}/api/${API_VERSION}/graphql.json`;
@@ -111,27 +101,34 @@ async function shopifyFetch({ query, variables = {} }: { query: string; variable
       body: JSON.stringify({ query, variables }),
     });
 
-    // Cast the response JSON to any to avoid "Property 'errors' does not exist on type 'unknown'" errors
-    const result: any = await response.json();
-    if (result.errors) console.error('Shopify GraphQL Errors:', result.errors);
+    // Fix: Cast result to any to allow accessing GraphQL response properties like errors and data on an unknown type
+    const result = await response.json() as any;
+    if (result.errors) {
+      console.error('Shopify GraphQL Errors:', result.errors);
+    }
+
     if (!response.ok) return null;
-    return result.data || null;
+    return result.data as T;
   } catch (error) {
-    if (isShopifyConnected()) console.error('Shopify Network Error:', error);
+    console.error('Shopify Network Error:', error);
     return null;
   }
 }
 
 export const fetchShopifyProducts = async (): Promise<Product[]> => {
-  const data = await shopifyFetch({ query: GET_PRODUCTS_QUERY, variables: { first: 50 } });
-  if (!data?.products) return MOCK_PRODUCTS;
+  const data = await shopifyFetch<any>({ query: GET_PRODUCTS_QUERY, variables: { first: 50 } });
+  
+  if (!data?.products) {
+    console.warn("Falling back to mock products.");
+    return MOCK_PRODUCTS;
+  }
 
   return data.products.edges.map((edge: any) => {
     const node = edge.node;
     const variants = node.variants.edges.map((vEdge: any) => vEdge.node);
     const firstVariant = variants.find((v: any) => v.availableForSale) || variants[0];
-    const mainImageUrl = node.images.edges[0]?.node?.url || (firstVariant?.image?.url || '');
-    
+    const mainImageUrl = node.images.edges[0]?.node?.url || firstVariant?.image?.url || '';
+
     return {
       id: node.id,
       variantId: firstVariant?.id || '',
@@ -145,20 +142,22 @@ export const fetchShopifyProducts = async (): Promise<Product[]> => {
         id: v.id,
         title: v.title,
         imageUrl: v.image?.url || mainImageUrl,
-        color: v.selectedOptions.find((o: any) => ['color', 'colour', 'style'].includes(o.name.toLowerCase()))?.value || '#000000'
+        color: v.selectedOptions.find((o: any) => 
+          ['color', 'colour', 'style'].includes(o.name.toLowerCase())
+        )?.value || '#000000'
       }))
     };
   });
 };
 
 export const fetchShopifyAddons = async (collectionHandle: string, category: AddonCategory): Promise<Addon[]> => {
-  const data = await shopifyFetch({ 
+  const data = await shopifyFetch<any>({ 
     query: GET_COLLECTION_QUERY, 
     variables: { handle: collectionHandle, first: 100 } 
   });
-  
+
   if (!data?.collection?.products) {
-    console.warn(`No addons found for collection: ${collectionHandle}, using partial mock fallback.`);
+    console.warn(`No addons found for collection: ${collectionHandle}, using mock fallback.`);
     return MOCK_ADDONS.filter(a => a.category === category);
   }
 
@@ -169,12 +168,12 @@ export const fetchShopifyAddons = async (collectionHandle: string, category: Add
       const v = vEdge.node;
       const colorOption = v.selectedOptions.find((o: any) => ['color', 'colour'].includes(o.name.toLowerCase()));
       const letterOption = v.selectedOptions.find((o: any) => o.name.toLowerCase() === 'letter');
-      
+
       addons.push({
         id: v.id,
         productId: node.id,
         variantId: v.id,
-        category: category,
+        category,
         title: v.title === 'Default Title' ? node.title : `${node.title} - ${v.title}`,
         imageUrl: v.image?.url || '',
         price: parseFloat(v.price.amount),
@@ -194,12 +193,19 @@ export const addToCart = async (customization: CustomizationData): Promise<strin
   const mutation = `
     mutation cartCreate($input: CartInput) {
       cartCreate(input: $input) {
-        cart { id checkoutUrl }
-        userErrors { field message }
+        cart {
+          id
+          checkoutUrl
+        }
+        userErrors {
+          field
+          message
+        }
       }
     }
   `;
 
+  // We pack essential customization data into attributes
   const essentialElements = customization.elements.map(el => ({
     t: el.type,
     txt: el.text || '',
@@ -218,10 +224,13 @@ export const addToCart = async (customization: CustomizationData): Promise<strin
   }];
 
   try {
-    const data = await shopifyFetch({ query: mutation, variables: { input: { lines } } });
-    if (data?.cartCreate?.cart?.checkoutUrl) return data.cartCreate.cart.checkoutUrl;
+    const data = await shopifyFetch<any>({ query: mutation, variables: { input: { lines } } });
+    if (data?.cartCreate?.cart?.checkoutUrl) {
+      return data.cartCreate.cart.checkoutUrl;
+    }
   } catch (error) {
     console.error('Error during addToCart:', error);
   }
+
   return 'https://checkout.shopify.com/mock-checkout-url';
 };

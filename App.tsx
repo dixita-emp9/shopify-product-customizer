@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Trash2, 
+import {
+  Trash2,
   Trash,
   ChevronLeft,
   CheckCircle2,
@@ -11,15 +11,8 @@ import {
 import { Product, Addon, AddonCategory, CanvasElement, CustomizationData, CustomizationMode } from './types';
 import { fetchShopifyProducts, fetchShopifyAddons, addToCart, isShopifyConnected } from './services/shopifyService';
 import { getDesignSuggestions } from './services/geminiService';
-import CustomizerCanvas from './components/Customizer/Canvas';
+import CustomizerCanvas from './components/Customizer/CanvasWrapper';
 import Sidebar from './components/Customizer/Sidebar';
-
-const MockBadge = () => !isShopifyConnected() ? (
-  <div className="fixed top-8 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-slate-900 text-white rounded-full flex items-center gap-2 z-[100] shadow-2xl">
-    <Zap size={14} className="text-yellow-400 fill-yellow-400" />
-    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Preview Mode</span>
-  </div>
-) : null;
 
 const App: React.FC = () => {
   const [step, setStep] = useState<'selection' | 'details' | 'customizer'>('selection');
@@ -34,7 +27,7 @@ const App: React.FC = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showAids, setShowAids] = useState(true);
-  
+
   // AI States
   const [aiInspiration, setAiInspiration] = useState<string>('');
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -52,11 +45,11 @@ const App: React.FC = () => {
           fetchShopifyAddons('letters', AddonCategory.LETTERS),
           fetchShopifyAddons('patches', AddonCategory.PATCHES)
         ]);
-        
+
         setProducts(prodRes);
         setLetterAddons(lettersRes);
         setPatchAddons(patchesRes);
-        
+
         if (prodRes.length > 0) {
           setSelectedProduct(prodRes[0]);
           setSelectedVariantId(prodRes[0].variantId);
@@ -94,7 +87,7 @@ const App: React.FC = () => {
       instanceId: `el-${Date.now()}`,
       type: 'addon',
       addon,
-      position: { x: 235, y: 275 },
+      position: { x: 200, y: 250 },
       size: { width: 80, height: 100 },
       rotation: 0,
       zIndex: canvasElements.length,
@@ -104,9 +97,7 @@ const App: React.FC = () => {
   };
 
   const handleUpdateEmbroidery = (text: string, font: string, color: string) => {
-    // Strictly enforce 12 character limit as per prompt requirements
-    const sanitizedText = text.slice(0, 12);
-    setEmbroideryText(sanitizedText);
+    setEmbroideryText(text);
     setEmbroideryFont(font);
     setEmbroideryColor(color);
 
@@ -115,7 +106,7 @@ const App: React.FC = () => {
       if (existing) {
         return prev.map(el => el.type === 'embroidery' ? {
           ...el,
-          text: sanitizedText,
+          text,
           fontFamily: font,
           color
         } : el);
@@ -123,10 +114,10 @@ const App: React.FC = () => {
         const newEl: CanvasElement = {
           instanceId: 'embroidery-main',
           type: 'embroidery',
-          text: sanitizedText,
+          text,
           fontFamily: font,
           color,
-          position: { x: 175, y: 325 },
+          position: { x: 150, y: 300 },
           size: { width: 200, height: 50 },
           rotation: 0,
           zIndex: 100,
@@ -144,7 +135,7 @@ const App: React.FC = () => {
         instanceId: `vinyl-${Date.now()}`,
         type: 'vinyl',
         imageUrl: dataUrl,
-        position: { x: 200, y: 250 },
+        position: { x: 150, y: 250 },
         size: { width: 150, height: 150 },
         rotation: 0,
         zIndex: canvasElements.length,
@@ -185,7 +176,7 @@ const App: React.FC = () => {
   const handleAddToCart = async () => {
     if (!selectedProduct || isAddingToCart) return;
     setIsAddingToCart(true);
-    
+
     const customization: CustomizationData = {
       baseProduct: selectedProduct,
       selectedVariantId,
@@ -201,7 +192,7 @@ const App: React.FC = () => {
       setShowSuccess(true);
       setTimeout(() => {
         window.location.assign(checkoutUrl);
-      }, 2000);
+      }, 1500);
     } catch (err) {
       console.error("Cart Error:", err);
       alert("Something went wrong. Please try again.");
@@ -209,38 +200,37 @@ const App: React.FC = () => {
     }
   };
 
+  const MockBadge = () => !isShopifyConnected() ? (
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/10 backdrop-blur-md rounded-full border border-slate-900/10 flex items-center gap-2 z-[100] pointer-events-none">
+      <Zap size={12} className="text-slate-900" />
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Demo Mode</span>
+    </div>
+  ) : null;
+
   if (step === 'selection') {
     return (
       <div className="min-h-screen bg-white">
         <MockBadge />
-        <header className="px-12 py-24 max-w-7xl mx-auto flex flex-col items-center text-center">
-          <h1 className="text-7xl font-black text-slate-900 mb-6 tracking-tighter leading-none">STYLN CUSTOM</h1>
-          <div className="h-1 w-24 bg-pink-600 mb-8 rounded-full"></div>
-          <p className="text-slate-400 text-[12px] font-black uppercase tracking-[0.6em]">Choose Your Iconic Base Piece</p>
+        <header className="px-8 py-20 max-w-7xl mx-auto flex flex-col items-center">
+          <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter leading-none">STYLN CUSTOM</h1>
+          <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.5em]">Choose Your Base Piece</p>
         </header>
 
-        <main className="max-w-7xl mx-auto px-12 pb-32">
+        <main className="max-w-7xl mx-auto px-8 pb-32">
           {products.length === 0 ? (
-            <div className="text-center py-20 flex flex-col items-center gap-6">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-pink-100 border-t-pink-600"></div>
-              <p className="text-slate-400 font-black uppercase text-[11px] tracking-widest">Accessing Storefront...</p>
+            <div className="text-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Fetching Collection...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
               {products.map(product => (
                 <div key={product.id} className="group cursor-pointer" onClick={() => handleProductSelect(product)}>
-                  <div className="aspect-[4/5] bg-slate-50 relative overflow-hidden mb-12 flex items-center justify-center p-20 rounded-[64px] group-hover:bg-slate-100 transition-all duration-700 hover:shadow-2xl">
-                    <img src={product.imageUrl} alt={product.title} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-1000 drop-shadow-2xl" />
-                    <div className="absolute inset-0 bg-pink-600 opacity-0 group-hover:opacity-10 transition-opacity duration-700"></div>
+                  <div className="aspect-[4/5] bg-slate-50 relative overflow-hidden mb-10 flex items-center justify-center p-16 rounded-[48px] group-hover:bg-slate-100 transition-all duration-700 shadow-sm">
+                    <img src={product.imageUrl} alt={product.title} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-1000 drop-shadow-xl" />
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-3xl font-black text-slate-900 leading-tight uppercase tracking-tight">{product.title}</h3>
-                    <div className="flex items-center gap-4">
-                      <p className="text-slate-400 font-black uppercase text-[11px] tracking-widest">{product.price.toFixed(2)} {product.currency}</p>
-                      <div className="h-1 w-8 bg-slate-100 rounded-full"></div>
-                      <span className="text-[10px] font-black uppercase text-pink-600">Personalise +</span>
-                    </div>
-                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 mb-1 uppercase tracking-tight">{product.title}</h3>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">{product.price.toFixed(2)} {product.currency}</p>
                 </div>
               ))}
             </div>
@@ -254,78 +244,63 @@ const App: React.FC = () => {
     return (
       <div className="h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
         <MockBadge />
-        <div className="flex-[3] relative flex items-center justify-center p-24 bg-white h-1/2 lg:h-auto">
-          <button onClick={() => setStep('selection')} className="absolute top-12 left-12 p-5 text-slate-300 hover:text-slate-900 transition-all z-10 hover:scale-110">
-            <ChevronLeft size={48} />
+        <div className="flex-[3] relative flex items-center justify-center p-20 bg-white h-1/2 lg:h-auto overflow-hidden">
+          <button onClick={() => setStep('selection')} className="absolute top-12 left-12 p-4 text-slate-300 hover:text-slate-900 transition-colors z-10">
+            <ChevronLeft size={36} />
           </button>
-          
-          <div className="absolute inset-0 opacity-[0.02] pointer-events-none overflow-hidden select-none flex flex-wrap justify-around items-center rotate-[-15deg] uppercase">
-            {Array.from({ length: 30 }).map((_, i) => (
-              <span key={i} className="text-5xl font-black text-slate-900 m-12">STYLN BRAND</span>
-            ))}
-          </div>
-
-          <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="max-w-full max-h-[80%] object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.15)] z-0 animate-in zoom-in-95 duration-700" />
+          <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="max-w-full max-h-[85%] object-contain drop-shadow-2xl z-0" />
         </div>
 
-        <div className="flex-[2] bg-slate-50 p-20 lg:p-28 overflow-y-auto h-1/2 lg:h-auto border-l border-slate-100 custom-scrollbar">
+        <div className="flex-[2] bg-slate-50 p-16 lg:p-24 overflow-y-auto h-1/2 lg:h-auto border-l border-slate-100">
           <div className="max-w-md mx-auto h-full flex flex-col">
-            <h2 className="text-6xl font-black text-slate-900 mb-14 leading-[0.95] uppercase tracking-tighter">{selectedProduct.title}</h2>
-            
-            <div className="space-y-16 flex-1">
-              <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-xl shadow-slate-200/50 space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center text-pink-600">
-                    <Sparkles size={22} />
-                  </div>
-                  <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">AI Concierge Advice</h4>
+            <h2 className="text-5xl font-black text-slate-900 mb-12 leading-[1] uppercase tracking-tighter">{selectedProduct.title}</h2>
+
+            <div className="space-y-12 flex-1">
+              <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles size={18} className="text-pink-600" />
+                  <h4 className="text-[10px] font-black text-pink-600 uppercase tracking-widest">AI Stylist Advice</h4>
                 </div>
                 {aiInspiration ? (
-                  <p className="text-slate-600 text-base font-medium leading-relaxed italic animate-in fade-in slide-in-from-bottom-2">
+                  <p className="text-slate-600 text-sm font-medium leading-relaxed italic animate-in fade-in slide-in-from-bottom-2">
                     "{aiInspiration}"
                   </p>
                 ) : (
-                  <button 
+                  <button
                     onClick={fetchAiSuggestions}
                     disabled={isLoadingAi}
-                    className="text-pink-600 hover:text-pink-700 text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 active:scale-95"
+                    className="text-slate-400 hover:text-pink-600 text-sm font-bold uppercase tracking-tight transition-colors flex items-center gap-2"
                   >
-                    {isLoadingAi ? 'Analyzing Trends...' : 'Unlock Design Suggestions'}
-                    {!isLoadingAi && <div className="w-1.5 h-1.5 rounded-full bg-pink-600 animate-ping"></div>}
+                    {isLoadingAi ? 'Consulting Gemini...' : 'Get Styling Ideas'}
                   </button>
                 )}
               </div>
 
-              <div className="space-y-6">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Details</h4>
+              <div>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Description</h4>
                 <p className="text-slate-500 leading-relaxed text-sm font-medium">{selectedProduct.description}</p>
-                <div className="grid grid-cols-2 gap-8 pt-4">
-                   <div className="space-y-1">
-                     <p className="text-[10px] font-black uppercase text-slate-300">Material</p>
-                     <p className="text-xs font-bold text-slate-600">{selectedProduct.material || 'Premium Fabric'}</p>
-                   </div>
-                   <div className="space-y-1">
-                     <p className="text-[10px] font-black uppercase text-slate-300">Size</p>
-                     <p className="text-xs font-bold text-slate-600">{selectedProduct.dimensions || 'Standard'}</p>
-                   </div>
-                </div>
               </div>
 
-              <div className="space-y-4 pt-10">
-                 <button 
-                   onClick={() => setStep('customizer')}
-                   className="group w-full flex items-center justify-between p-8 bg-pink-600 rounded-[40px] text-white font-black tracking-[0.3em] uppercase text-[12px] hover:bg-slate-900 transition-all shadow-2xl shadow-pink-200 hover:shadow-slate-300 active:scale-[0.98]"
-                 >
-                   Start Customizing
-                   <Sparkles size={20} className="group-hover:rotate-12 transition-transform" />
-                 </button>
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Personalisation</h4>
+                <button
+                  onClick={() => setStep('customizer')}
+                  className="w-full flex items-center justify-between p-6 border-2 border-pink-600 rounded-3xl text-pink-600 font-black tracking-[0.2em] uppercase text-[11px] hover:bg-pink-50 transition-all shadow-2xl shadow-pink-100"
+                >
+                  Start Customizing
+                  <Sparkles size={16} />
+                </button>
               </div>
             </div>
 
-            <div className="mt-20 pt-10 border-t border-slate-200">
-              <div className="flex items-center justify-between mb-10">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Estimated Base</span>
-                <span className="text-5xl font-black text-slate-900 tracking-tighter">{selectedProduct.price.toFixed(2)} <span className="text-xs text-slate-400">{selectedProduct.currency}</span></span>
+            <div className="mt-12 pt-8 border-t border-slate-200">
+              <div className="flex items-center justify-between mb-8">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Price</span>
+                <span className="text-4xl font-black text-slate-900 tracking-tighter">{selectedProduct.price.toFixed(2)} {selectedProduct.currency}</span>
+              </div>
+              <div className="flex gap-4">
+                <button onClick={() => setStep('selection')} className="flex-1 py-5 bg-slate-200 text-slate-500 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-slate-300">Back</button>
+                <button onClick={() => setStep('customizer')} className="flex-[2] py-5 bg-pink-600 text-white rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-pink-700 shadow-xl shadow-pink-200">Customize</button>
               </div>
             </div>
           </div>
@@ -341,53 +316,53 @@ const App: React.FC = () => {
       <div className="h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
         <MockBadge />
         <div className="flex-[3] relative flex flex-col h-2/3 lg:h-auto overflow-hidden">
-          <header className="h-24 flex items-center justify-between px-16 border-b border-slate-50 bg-white z-30">
-            <button onClick={() => setStep('details')} className="text-slate-300 hover:text-slate-900 transition-all p-4 hover:scale-110">
-              <ChevronLeft size={40} />
+          <header className="h-24 flex items-center justify-between px-12 border-b border-slate-50 bg-white z-30">
+            <button onClick={() => setStep('details')} className="text-slate-300 hover:text-slate-900 transition-colors p-3">
+              <ChevronLeft size={32} />
             </button>
-            <div className="flex gap-6">
-              <button 
+            <div className="flex gap-4">
+              <button
                 onClick={fetchAiSuggestions}
-                className="flex items-center gap-3 text-[10px] font-black uppercase text-pink-600 hover:bg-pink-50 transition-all px-8 py-4 border-2 border-pink-50 rounded-full bg-white shadow-sm active:scale-95"
+                className="flex items-center gap-2 text-[10px] font-black uppercase text-pink-600 hover:bg-pink-50 transition-colors px-6 py-3 border border-pink-100 rounded-full bg-white shadow-sm"
               >
-                <Sparkles size={16} /> Magic Suggest
+                <Sparkles size={14} /> Magic Suggest
               </button>
-              <button onClick={clearAll} className="flex items-center gap-3 text-[10px] font-black uppercase text-slate-300 hover:text-red-500 transition-all px-8 py-4 border-2 border-slate-50 rounded-full bg-white shadow-sm active:scale-95">
-                <Trash size={16} /> Reset
+              <button onClick={clearAll} className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors px-6 py-3 border border-slate-100 rounded-full bg-white shadow-sm">
+                <Trash size={14} /> Reset
               </button>
             </div>
           </header>
 
-          <div className="flex-1 relative bg-slate-50/50 flex items-center justify-center p-16 overflow-hidden">
-             <CustomizerCanvas
-                backgroundImageUrl={bgImage}
-                elements={canvasElements}
-                onUpdateElement={handleUpdateElement}
-                onSelectElement={setSelectedElementId}
-                selectedId={selectedElementId}
-                width={550}
-                height={650}
-                showAids={showAids}
-              />
+          <div className="flex-1 relative bg-slate-50 flex items-center justify-center p-12 overflow-hidden">
+            <CustomizerCanvas
+              backgroundImageUrl={bgImage}
+              elements={canvasElements}
+              onUpdateElement={handleUpdateElement}
+              onSelectElement={setSelectedElementId}
+              selectedId={selectedElementId}
+              width={550}
+              height={650}
+              showAids={showAids}
+            />
 
-              {selectedElementId && (
-                <button 
-                  onClick={deleteElement}
-                  className="absolute bottom-16 right-16 bg-red-500 text-white p-6 rounded-full shadow-[0_20px_50px_rgba(239,68,68,0.4)] hover:bg-red-600 hover:scale-110 transition-all z-40 active:scale-90"
-                >
-                  <Trash2 size={28} />
-                </button>
-              )}
+            {selectedElementId && (
+              <button
+                onClick={deleteElement}
+                className="absolute bottom-12 right-12 bg-red-500 text-white p-5 rounded-full shadow-2xl hover:bg-red-600 transition-all z-40"
+              >
+                <Trash2 size={24} />
+              </button>
+            )}
           </div>
         </div>
 
-        <Sidebar 
+        <Sidebar
           product={selectedProduct}
           selectedVariantId={selectedVariantId}
           onVariantChange={setSelectedVariantId}
           mode={customMode}
           onModeChange={setCustomMode}
-          onAddAddon={addAddonToCanvas} 
+          onAddAddon={addAddonToCanvas}
           onUpdateEmbroidery={handleUpdateEmbroidery}
           onAddVinyl={addVinylToCanvas}
           totalPrice={totalPrice}
@@ -402,19 +377,19 @@ const App: React.FC = () => {
         />
 
         {(showSuccess || isAddingToCart) && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-8 bg-slate-900/40 backdrop-blur-2xl animate-in fade-in duration-500">
-            <div className="bg-white rounded-[80px] p-24 max-w-2xl w-full text-center shadow-[0_50px_100px_rgba(0,0,0,0.2)] scale-in-center">
-              <div className={`w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-12 ${showSuccess ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
-                {showSuccess ? <CheckCircle2 size={80} className="animate-in zoom-in duration-500" /> : <div className="animate-spin rounded-full h-16 w-16 border-4 border-pink-100 border-t-pink-600" />}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-xl animate-in fade-in duration-500">
+            <div className="bg-white rounded-[64px] p-20 max-w-xl w-full text-center shadow-2xl scale-in-center">
+              <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-10 ${showSuccess ? 'bg-emerald-50 text-emerald-500' : 'bg-pink-50 text-pink-500'}`}>
+                {showSuccess ? <CheckCircle2 size={64} /> : <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600" />}
               </div>
-              <h3 className="text-5xl font-black text-slate-900 mb-8 uppercase tracking-tighter">
-                {showSuccess ? 'Design Secured' : 'Building Cart'}
+              <h3 className="text-4xl font-black text-slate-900 mb-6 uppercase tracking-tighter">
+                {showSuccess ? 'Saving Design' : 'Creating Cart'}
               </h3>
-              <p className="text-slate-400 font-black uppercase text-[12px] tracking-[0.4em] mb-12">
-                {showSuccess ? "Transitioning to Secure Checkout..." : "Finalizing your masterpiece..."}
+              <p className="text-slate-400 font-bold uppercase text-[11px] tracking-widest mb-10">
+                {showSuccess ? "Hold tight, we're building your cart..." : "Preparing your custom items..."}
               </p>
-              <div className="w-full bg-slate-50 h-3 rounded-full overflow-hidden p-0.5 border border-slate-100">
-                <div className={`h-full bg-pink-600 rounded-full transition-all duration-[2000ms] ease-out ${showSuccess ? 'w-full' : 'w-1/3 animate-pulse'}`} />
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className={`h-full bg-pink-600 transition-all duration-500 ${showSuccess ? 'w-full' : 'w-1/2 animate-pulse'}`} />
               </div>
             </div>
           </div>

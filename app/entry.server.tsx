@@ -1,31 +1,22 @@
+import { ServerRouter } from 'react-router';
+import type { EntryContext } from '@react-router/node';
+import { isbot } from 'isbot';
+import { renderToString } from 'react-dom/server';
 
-import type {EntryContext} from '@shopify/remix-oxygen';
-import {RemixServer} from '@remix-run/react';
-import {renderToReadableStream} from 'react-dom/server';
-
-export default async function handleRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  remixContext: EntryContext,
+export default function handleRequest(
+    request: Request,
+    responseStatusCode: number,
+    responseHeaders: Headers,
+    reactRouterContext: EntryContext,
 ) {
-  // Cast remixContext to any to satisfy the type requirement of the context prop in RemixServer
-  const body = await renderToReadableStream(
-    <RemixServer context={remixContext as any} url={request.url} />,
-    {
-      signal: request.signal,
-      onError(error: unknown) {
-        // eslint-disable-next-line no-console
-        console.error(error);
-        responseStatusCode = 500;
-      },
-    },
-  );
+    const html = renderToString(
+        <ServerRouter context={reactRouterContext} url={request.url} />
+    );
 
-  responseHeaders.set('Content-Type', 'text/html');
+    responseHeaders.set('Content-Type', 'text/html');
 
-  return new Response(body, {
-    headers: responseHeaders,
-    status: responseStatusCode,
-  });
+    return new Response('<!DOCTYPE html>' + html, {
+        headers: responseHeaders,
+        status: responseStatusCode,
+    });
 }

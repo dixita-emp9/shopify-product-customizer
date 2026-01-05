@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 
-// Lazy load the App component to ensure Konva/Canvas is only initialized on the client.
 const App = lazy(() => import('../../App'));
 
 export default function Index() {
