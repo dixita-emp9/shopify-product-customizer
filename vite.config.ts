@@ -1,22 +1,27 @@
-import { reactRouter } from "@react-router/dev/vite";
-import { hydrogen } from "@shopify/hydrogen/vite";
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import { hydrogen } from '@shopify/hydrogen/vite';
+import { reactRouter } from '@react-router/dev/vite';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   plugins: [
-    tailwindcss(),
     hydrogen(),
-    reactRouter(),
-    tsconfigPaths(),
+    reactRouter({
+      ssr: true,
+    }),
+    tsconfigPaths()
   ],
   ssr: {
-    // Ensure Konva and related libs are treated as client-only during the SSR build
-    noExternal: ['react-konva', 'konva', 'lucide-react', '@google/genai'],
+    noExternal: ['@shopify/hydrogen'],
+    optimizeDeps: {
+      include: ['@shopify/hydrogen', 'react', 'react-dom'],
+    },
   },
-  build: {
-    assetsInlineLimit: 0,
-    sourcemap: true,
-  }
+  resolve: {
+    alias: {
+      // Replace Konva with empty module during SSR
+      'konva': process.env.BUILD_TARGET === 'ssr' ? 'konva/lib/index-node.js' : 'konva',
+      'react-konva': process.env.BUILD_TARGET === 'ssr' ? './ssr-stub.js' : 'react-konva',
+    },
+  },
 });
