@@ -1,9 +1,7 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Stage, Layer, Image as KonvaImage, Transformer, Text as KonvaText, Rect } from 'react-konva';
 import { CanvasElement } from '../../types';
 import { Info } from 'lucide-react';
-import Konva from 'konva';
 
 interface CanvasProps {
   backgroundImageUrl: string;
@@ -48,6 +46,7 @@ const URLImage = ({ src, x, y, width, height, rotation, isSelected, onSelect, on
   const trRef = useRef<any>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const img = new window.Image();
     img.src = src;
     img.crossOrigin = "anonymous";
@@ -56,8 +55,6 @@ const URLImage = ({ src, x, y, width, height, rotation, isSelected, onSelect, on
 
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
-      // Safely call nodes() only if the method exists.
-      // In Konva 9+, .nodes() is the correct method.
       if (trRef.current && typeof trRef.current.nodes === 'function') {
         trRef.current.nodes([shapeRef.current]);
       }
@@ -177,6 +174,7 @@ const CustomizerCanvas: React.FC<CanvasProps> = ({
   const stageRef = useRef<any>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const img = new window.Image();
     img.src = backgroundImageUrl;
     img.crossOrigin = "anonymous";
