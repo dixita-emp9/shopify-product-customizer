@@ -12,18 +12,17 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   ssr: {
-    // These packages depend on browser globals and should not be bundled for the server
+    // Prevent these browser-heavy packages from being bundled into the server-side code
     noExternal: ['react-konva', 'konva', 'lucide-react', '@google/genai'],
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router', 'konva', 'react-konva'],
+  server: {
+    // Ensure the server can watch files outside the app directory if necessary
+    fs: {
+      allow: ['..'],
+    },
   },
   build: {
-    // Optimizations for Oxygen deployment
+    // Assets optimization for the Oxygen environment
     assetsInlineLimit: 0,
-    rollupOptions: {
-      // Ensure we don't accidentally try to bundle index.html
-      input: undefined,
-    }
   }
 });

@@ -20,7 +20,7 @@ export default function Root() {
         <Meta />
         <Links />
         <style dangerouslySetInnerHTML={{ __html: `
-          body { font-family: 'Inter', sans-serif; }
+          body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
           .custom-scrollbar::-webkit-scrollbar { width: 6px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
