@@ -1,33 +1,22 @@
-import { defineConfig, loadEnv } from 'vite';
-import { reactRouter } from '@react-router/dev/vite';
-import { hydrogen } from '@shopify/hydrogen/vite';
+import {defineConfig} from 'vite';
+import {hydrogen} from '@shopify/hydrogen/vite';
+import {reactRouter} from '@react-router/dev/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import path from 'path';
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-
-  return {
-    plugins: [
-      hydrogen(),
-      reactRouter(),
-      tsconfigPaths(),
-    ],
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './app'), // Standard practice to point to app folder
-      },
-    },
-    server: {
-      port: 3000,
-      host: '0.0.0.0',
-    },
+export default defineConfig({
+  plugins: [
+    hydrogen(), 
+    reactRouter(), 
+    tsconfigPaths()
+  ],
+  build: {
+    // This tells Vite not to look for an index.html as the primary entry
+    ssr: true,
+  },
+  ssr: {
+    // Explicitly point to the Oxygen server entry
     optimizeDeps: {
       include: ['@shopify/hydrogen'],
     },
-  };
+  },
 });
