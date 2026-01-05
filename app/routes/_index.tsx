@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 
-// Use React.lazy to ensure the App component (and its canvas dependencies) 
-// is only loaded on the client side.
+// Lazy load the App component to ensure Konva/Canvas is only initialized on the client.
 const App = lazy(() => import('../../App'));
 
 export default function Index() {
@@ -11,7 +10,6 @@ export default function Index() {
     setIsClient(true);
   }, []);
 
-  // Return a minimal loading state for SSR
   if (!isClient) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-6">

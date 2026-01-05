@@ -12,11 +12,12 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   ssr: {
-    // Ensure browser-only libraries are not bundled for the server-side environment
+    // These packages must not be bundled into the server-side code as they require 'window' or 'canvas'
     noExternal: ['react-konva', 'konva', 'lucide-react', '@google/genai'],
   },
   build: {
-    // Optimization for Oxygen platform
+    // Standard Hydrogen optimization for the Oxygen deployment platform
     assetsInlineLimit: 0,
+    sourcemap: true,
   }
 });
